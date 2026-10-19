@@ -1,0 +1,15 @@
+# @package model.compression
+
+# BrainScape-trained WF-SA-VAE compression model.
+defaults:
+  - /model/compression/wavelet_fusion/wf_sa_vae_arch
+  - _self_
+
+autoencoder_wf_sa_vae:
+  _target_: brainmint.models.compression.wavelet_fusion.WaveletFusionVAE
+  autoencoder: ${model.compression.wavelet_fusion.autoencoder}
+  ckpt_path: ${paths.wf_sa_vae_checkpoint}
+  state_key: autoencoder
+  strict: true
+  freeze: true
+  set_eval: true

@@ -1,0 +1,61 @@
+# @package model.generation.diffusion_unet
+
+defaults:
+  - /model/shared/vae
+  - _self_
+
+# Reusable latent diffusion UNet backbone.
+diffusion_unet:
+  _target_: brainmint.models.generation.diffusion_unet.DiffusionUNet
+  spatial_dims: ${model.shared.vae.spatial_dims}
+  in_channels:  ${model.shared.vae.latent_channels}
+  out_channels: ${model.shared.vae.latent_channels}
+  num_channels: [64, 128, 256, 512]
+  norm_num_groups: 32
+  attention_levels: [false, false, true, true]
+  num_head_channels: [0, 0, 32, 32]
+  num_res_blocks: 2
+  use_flash_attention: true
+  num_class_embeds: 4  # Modality Map
+  resblock_updown: true
+  include_fc: true
+
+  # Optional global (non-spatial) conditioning vector.
+  # When enabled, the Lightning module must also be given a demographics_encoder
+  # and the dataset pipeline must add demo_values/demo_missing via transforms.
+  with_demographics: false
+  dem_embed_dim: null
+
+# Noise Schedulers:
+scheduler_rflow:
+  _target_: monai.networks.schedulers.RFlowScheduler
+  num_train_timesteps: 1000
+  use_discrete_timesteps: false
+  use_timestep_transform: true
+  sample_method: uniform
+  scale: 1.4
+
+
+scheduler_rflow_wrapper:
+  _target_: brainmint.models.schedulers.rflow_scheduler.RFlowSchedulerModule
+  num_train_timesteps: 1000
+  use_discrete_timesteps: false
+  use_timestep_transform: true
+  sample_method: uniform
+  scale: 1.4
+
+
+scheduler_ddpm:
+  _target_: monai.networks.schedulers.DDPMScheduler
+  num_train_timesteps: 1000
+  beta_start: 0.0005
+  beta_end: 0.015
+  schedule: scaled_linear_beta
+  clip_sample: false
+
+scheduler_ddpm_cosine:
+  _target_: monai.networks.schedulers.DDPMScheduler
+  num_train_timesteps: 1000
+  schedule: cosine
+  s: 0.008
+  clip_sample: false

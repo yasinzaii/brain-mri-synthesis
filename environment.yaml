@@ -1,0 +1,22 @@
+name: brain-mri-synthesis
+
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pip
+  - pytorch=2.4.*
+  - pytorch-cuda=12.4
+  - torchvision=0.19.*
+  - numpy
+  - nibabel
+  - hydra-core=1.3.*
+  - omegaconf=2.3.*
+  - pytorch-lightning
+  - tqdm
+  - pip:
+      - brainmint[all]>=0.1.0,<0.2
+      - medmetric[monai]>=0.1.1,<0.2

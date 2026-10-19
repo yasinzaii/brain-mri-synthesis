@@ -1,0 +1,25 @@
+# @package paths
+
+# WF-SA-VAE latent dataset exported from BrainScape.
+#
+# This path group describes the output of
+# experiments/latent_dataset/export_latents.py. The exporter encodes each
+# BrainScape MRI with the WF-SA-VAE and writes the resulting latent tensors.
+# The latent MRI tensors are used for WFDM training.
+#
+# Expected layout:
+#   <wf_sa_vae_latent_dataset_root>/
+#     dataset/                              # exported latent tensors
+#     wavelet_fusion_att_bs_latent_dataset.json  # manifest with latent paths
+#
+# Set only wf_sa_vae_latent_dataset_root in configs/paths/override.yaml
+# (private and gitignored), or pass it as a Hydra CLI override.
+#
+# Root directory created/used by the WF-SA-VAE latent exporter.
+wf_sa_vae_latent_dataset_root: ???
+
+# Directory tree containing the exported compressed dataset latent and latent-sigma files.
+wf_sa_vae_latent_dataset_data_root: ${paths.wf_sa_vae_latent_dataset_root}/dataset
+
+# Exporter-generated BrainScape manifest, preserving splits and adding latent paths.
+wf_sa_vae_latent_dataset_manifest: ${paths.wf_sa_vae_latent_dataset_root}/wavelet_fusion_att_bs_latent_dataset.json

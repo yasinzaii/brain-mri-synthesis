@@ -1,0 +1,17 @@
+# @package trainer 
+
+
+
+# Lightning trainer settings
+pl_trainer:
+  accelerator: auto  # gpu, mps or cpu – Lightning detects
+  devices: 1
+  strategy: auto
+  log_every_n_steps: 4 #TODO
+  check_val_every_n_epoch: 3 #TODO
+  enable_checkpointing: true
+
+  
+  precision: ??? # Required
+  max_epochs: ???
+

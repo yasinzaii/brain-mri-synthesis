@@ -1,0 +1,6 @@
+# Local machine and experiment outputs
+configs/paths/override.yaml
+__pycache__/
+*.py[cod]
+.hydra/
+outputs/

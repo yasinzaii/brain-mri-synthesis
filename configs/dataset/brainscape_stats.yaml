@@ -1,0 +1,34 @@
+# @package dataset.stats
+
+# BrainScape intensity statistics (overall, all splits combined).
+# Generated via:
+#   python experiments/dataset/brainscape_intensity_stats.py
+# using configs/exp/dataset/brainscape_intensity_stats.yaml
+# with adaptive_background_mask percentile masking (quantile=0.10, eps=1e-3).
+
+# generated_by:
+#   script: experiments/dataset/brainscape_intensity_stats.py
+#   config: configs/exp/dataset/brainscape_intensity_stats.yaml
+#   masking:
+#     method: adaptive_background_mask
+#     quantile: 0.10
+#     eps: 1.0e-3
+#     dataset_split: all
+
+brainscape:
+  modalities:
+    flair:
+      mean: 0.635425
+      std: 0.210089
+    t1ce:
+      mean: 0.582091
+      std: 0.181681
+    t1w:
+      mean: 0.635164
+      std: 0.213660
+    t2w:
+      mean: 0.454760
+      std: 0.196652
+    all:
+      mean: 0.606201
+      std: 0.219409

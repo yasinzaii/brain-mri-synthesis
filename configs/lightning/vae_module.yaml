@@ -1,0 +1,72 @@
+# @package lightning
+
+defaults: 
+  - _self_
+
+vae_lightning: # lightning module
+  _target_: brainmint.lightning.vae_module.VAEModule
+
+  hparams:
+    adam_eps:     # Adam eps values depend on trainer precision;
+      fp16: 1e-6  # used when Trainer precision starts with "16"
+      fp32: 1e-8  # fallback for full-precision runs
+
+    lr: ???  # Required 
+    lambdaLR: ??? # Required, eg: [[0, 0.01], [10, 0.1], [20, 1.0]]
+    
+    # Optional overrides: default to lambdaLR when omitted
+    lambdaLR_G: ${.lambdaLR}
+    lambdaLR_D: ${.lambdaLR}
+  
+  # Sub-module dependencies injected as objects
+  autoencoder: ???
+  discriminator: ???
+  inferer: ???
+
+  # (Partial) 
+  loss_manager: ${loss.vae_loss} # device info injected in setup()
+  optimizer: ${lightning.optimizer}
+  
+  scheduler: ${lightning.scheduler}
+  scheduler_g: ${lightning.scheduler_g}
+  scheduler_d: ${lightning.scheduler_d}
+    
+# Optimizer (Partial factory config - common for encoder & discriminator)
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: ${lightning.vae_lightning.hparams.lr}
+  # eps: will be filled in configure_optimizers()
+  # parms: will be filled in configure_optimizers()
+
+# (Partial) - Learning rate schedule (piecewise lambda)
+lr_lambda_piecewise:
+  # _partial_: true # will chain instantiated when instantiating scheduler
+  _target_ : brainmint.utils.schedules.build_piecewise_linear_lambda
+  schedule : ${lightning.vae_lightning.hparams.lambdaLR}
+
+lr_lambda_piecewise_g:
+  _target_: brainmint.utils.schedules.build_piecewise_linear_lambda
+  schedule: ${lightning.vae_lightning.hparams.lambdaLR_G}
+
+lr_lambda_piecewise_d:
+  _target_: brainmint.utils.schedules.build_piecewise_linear_lambda
+  schedule: ${lightning.vae_lightning.hparams.lambdaLR_D}
+
+
+# Scheduler (Partial factory config - common for encoder & discriminator)
+scheduler:
+  _target_: torch.optim.lr_scheduler.LambdaLR
+  _partial_: true         
+  lr_lambda: ${lightning.lr_lambda_piecewise}
+  #optimizer: will be filled in configure_optimizers()
+
+scheduler_g:
+  _target_: torch.optim.lr_scheduler.LambdaLR
+  _partial_: true
+  lr_lambda: ${lightning.lr_lambda_piecewise_g}
+
+scheduler_d:
+  _target_: torch.optim.lr_scheduler.LambdaLR
+  _partial_: true
+  lr_lambda: ${lightning.lr_lambda_piecewise_d}

@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - common
+  - _self_
+
+project: metrics_wfdm_rflow_l2
+report:
+  model_name: "WFDM (RFlow L2)"
+  notes: "Metrics for WFDM RFlow L2"
+
+metrics_job:
+  synthetic_root: ${paths.syn_bs_wfdm_rflow_l2_ds_root}
+  synthetic_json: ${paths.syn_bs_wfdm_rflow_l2_json}
+
+synthetic_generation:
+  compute_metrics: false
+  metrics:
+    warmup_runs: 3
+    target_samples: null
+    reset_peak_memory_each_run: true

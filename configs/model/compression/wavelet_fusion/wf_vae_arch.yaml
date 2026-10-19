@@ -1,0 +1,36 @@
+# @package model.compression.wavelet_fusion
+
+defaults:
+  - /model/shared/vae
+  - _self_
+
+autoencoder:
+  _target_: brainmint.models.compression.wavelet_fusion.WaveletFusionAutoencoder
+  spatial_dims: ${model.shared.vae.spatial_dims}
+  in_channels: ${model.shared.vae.image_channels}
+  out_channels: ${model.shared.vae.image_channels}
+  latent_channels: ${model.shared.vae.latent_channels}
+  channels: [128, 256]
+  num_res_blocks: [2, 2]
+  norm_num_groups: 2
+  norm_eps: 1e-6
+
+  # Attention levels must remain disabled for this architecture; encoder/decoder
+  # symmetry depends on the current WaveletFusionAutoencoder implementation.
+  attention_levels: [false, false]
+
+  with_encoder_nonlocal_attn: false
+  with_decoder_nonlocal_attn: false
+  use_checkpoint: false
+  use_convtranspose: true
+  include_fc: true
+  use_flash_attention: false
+
+patch_discriminator:
+  _target_: monai.networks.nets.PatchDiscriminator
+  spatial_dims: ${model.shared.vae.spatial_dims}
+  num_layers_d: 3
+  channels: 32
+  in_channels: ${model.shared.vae.image_channels}
+  out_channels: 1
+  norm: INSTANCE

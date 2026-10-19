@@ -1,0 +1,179 @@
+# @package _global_
+
+# WFDM synthetic generation: modality + demographics conditioned latent diffusion using WF-SA-VAE latents.
+
+defaults:
+  - /paths/paths
+  - /paths/wfdm_synthetic_datasets
+  - optional /paths: override # private path overrides, gitignored
+  - /dataset/brainscape
+  - /dataset/conditioning
+  - /dataset/demographics
+  - /model/compression/wavelet_fusion/wf_sa_vae_arch
+  - /model/generation/diffusion_unet/modality_conditioned
+  - /model/conditioning/demographics_encoder
+  - /hydra/output
+  - /hydra/logging
+  - _self_
+
+project: synthetic_dataset_wfdm
+device: auto
+seed: 42
+
+inference_steps: 50
+target_noise_scheduler: ???
+wfdm_ckpt: ???
+
+
+dataset:
+  brainscape:
+    json_path: ${paths.wf_sa_vae_latent_dataset_manifest}
+    dataset_root: ${paths.wf_sa_vae_latent_dataset_data_root}
+
+    test_batch_size: 10
+    num_workers: 10
+    cache_rate: 0.0
+    prefetch_factor: 2
+    pin_memory: false
+    persistent_workers: true
+
+    input_specs:
+      - key: latent
+        group: latent
+        modalities: [T1w, T2w, T1ce, FLAIR]
+
+    test_tf:
+      _target_: brainmint.data.transforms.mri_vae.VAETransform
+      is_train: false
+      random_aug: false
+      image_keys: []
+      label_keys: []
+      passthrough_keys: [latent]
+      meta_keys:
+      - modality
+      - demographics
+      - dataset
+      - subject
+      - session
+      - type
+      - group
+      - latent_path
+
+      extra_xforms_start:
+        - _target_: brainmint.data.transforms.copy_paths.CopyKeysToNewKeysd
+          src_keys: [latent]
+          dst_keys: [latent_path]
+          allow_missing_keys: false
+
+      extra_xforms_end:
+        - ${dataset.conditioning.modality_conditioning}
+        - ${dataset.conditioning.demographics_conditioning}
+
+# Model Overrides
+model:
+  generation:
+    diffusion_unet:
+      diffusion_unet:
+        num_class_embeds: 4  # Modality map
+        with_demographics: true
+        # Must match model.conditioning.demographics_encoder.dem_embed_dim
+        dem_embed_dim: ${model.conditioning.demographics_encoder.dem_embed_dim}
+
+
+lightning:
+  diffusion_inference:
+    _target_: brainmint.lightning.diffusion_inference_module.DiffusionInferenceModule
+
+    pipeline:
+      _target_: brainmint.inference.diffusion.pipelines.base.LatentDiffusionGenerationPipeline
+
+      latent_provider:
+        _target_: brainmint.inference.diffusion.latent.common.from_batch.LatentFromBatch
+        key: latent
+
+      conditioning:
+        _target_: brainmint.inference.diffusion.conditioning.base.ComposeConditioning
+        builders:
+          - _target_: brainmint.inference.diffusion.conditioning.common.class_labels.ClassLabelsConditioning
+            in_key: modality_map
+            out_key: class_labels
+            num_classes: ${model.generation.diffusion_unet.diffusion_unet.num_class_embeds}
+          - _target_: brainmint.inference.diffusion.conditioning.common.demographics.DemographicsEmbeddingConditioning
+            values_key: demo_values
+            missing_key: demo_missing
+            encoder_module_key: demographics_encoder
+            out_embed_key: demographics_embedding
+
+      sampler:
+        _target_: brainmint.inference.diffusion.samplers.common.cond_unet.DiffusionUNetTimestepSampler
+        num_inference_steps: ${inference_steps}
+
+      postprocess: null
+      force_float32_decode: true
+
+    diffusion_unet: ${model.generation.diffusion_unet.diffusion_unet}
+    noise_scheduler: ${target_noise_scheduler}
+    autoencoder: ${model.compression.wavelet_fusion.autoencoder}
+
+    extra_modules:
+      demographics_encoder: ${model.conditioning.demographics_encoder}
+
+    scalars:
+      scale_factor: 1.61699
+
+    hparams:
+      weight_loads:
+        # Load WF-SA-VAE
+        - target: autoencoder
+          state_key: "autoencoder"
+          path: ${paths.wf_sa_vae_checkpoint}
+          strict: auto
+          freeze: true
+          eval: true
+
+        # Load WFDM diffusion UNet
+        - target: unet
+          state_key: "unet"
+          path: ${wfdm_ckpt}
+          strict: auto
+          freeze: true
+          eval: true
+
+        # Load demographics encoder
+        - target: demographics_encoder
+          state_key: "demographics_encoder"
+          path: ${wfdm_ckpt}
+          strict: auto
+          freeze: true
+          eval: true
+
+synthetic_generation:
+  out_dataset_root: ???
+  out_json: ???
+  split: "test"
+
+  match_group: "latent"
+  out_group: "latent"
+  match_group_dir: "preprocessed"
+  out_group_dir: "preprocessed"
+
+  path_key: "latent_path"
+  modality_key: "modality"
+  brainscape_match_keys:
+    - "dataset"
+    - "subject"
+    - "session"
+    - "type"
+    - "group"
+
+  sample_postfix: ???
+
+  sample_out_size: ${dataset.brain_roi_size}
+
+  overwrite: false
+  max_items: null  # null = all
+  compute_metrics: false
+  # metrics:
+  #   warmup_runs: 3
+  #   target_samples: null
+  #   reset_peak_memory_each_run: true

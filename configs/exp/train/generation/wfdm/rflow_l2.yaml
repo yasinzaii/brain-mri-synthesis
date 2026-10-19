@@ -1,0 +1,145 @@
+# @package _global_
+
+defaults:
+  - /paths/paths
+  - optional /paths: override # private path overrides, gitignored
+  - /dataset/brainscape
+  - /dataset/demographics
+  - /model/compression/wavelet_fusion/wf_sa_vae_arch
+  - /model/generation/diffusion_unet/modality_conditioned
+  - /model/conditioning/demographics_encoder
+  - /lightning/diffusion_module
+  - /trainer/diffusion/default
+  - /hydra/output
+  - /hydra/logging
+  - /callbacks/diffusion
+  - /loggers/default
+  - _self_
+
+project: wfdm_rflow_l2
+seed: 42
+fast_dev_run: false
+
+# WFDM training: modality + demographics conditioned latent diffusion using WF-SA-VAE latents.
+
+
+dataset:
+  brainscape:
+
+    json_path: ${paths.wf_sa_vae_latent_dataset_manifest}
+    dataset_root: ${paths.wf_sa_vae_latent_dataset_data_root}
+    batch_size: 44
+    val_batch_size: 96
+    test_batch_size: 96
+    num_workers: 12
+    pin_memory: false
+    persistent_workers: true
+    prefetch_factor: 4
+
+    # Using WeightedRandomSampler for handling Modality imbalance
+    use_modality_sampler: true
+    modality_sampler_alpha: 0.7
+
+    input_specs:
+      - key: latent
+        group: latent
+        modalities: [T1w, T2w, T1ce, FLAIR]
+      - key: latent_sigma
+        group: latent_sigma
+        modalities: [T1w, T2w, T1ce, FLAIR]
+
+    train_tf:
+      _target_: brainmint.data.transforms.mri_vae.VAETransform
+      is_train: true
+      random_aug: false
+      image_keys: []
+      passthrough_keys:
+        - latent
+        - latent_sigma
+      meta_keys: [modality, demographics]
+      extra_xforms_end:
+        - ${dataset.conditioning.modality_conditioning}
+        - ${dataset.conditioning.demographics_conditioning}
+    val_tf:
+      _target_: brainmint.data.transforms.mri_vae.VAETransform
+      is_train: false
+      random_aug: false
+      image_keys: []
+      passthrough_keys:
+        - latent
+        # - latent_sigma - Target for val: zval = mu, so dropping sigma.
+      meta_keys: [modality, demographics]
+      extra_xforms_end:
+        - ${dataset.conditioning.modality_conditioning}
+        - ${dataset.conditioning.demographics_conditioning}
+    test_tf: ${dataset.brainscape.val_tf}
+
+model:
+  generation:
+    diffusion_unet:
+      diffusion_unet:
+        num_class_embeds: 4  # Modality Map
+        with_demographics: true
+        # Must match model.conditioning.demographics_encoder.dem_embed_dim
+        dem_embed_dim: ${model.conditioning.demographics_encoder.dem_embed_dim}
+
+# Target Noise Scheduler
+target_noise_scheduler:
+  scheduler: ${model.generation.diffusion_unet.scheduler_rflow}
+  infer_steps: 50
+
+  # scheduler: ${model.generation.diffusion_unet.scheduler_ddpm}
+
+# Lightning module hparams override
+lightning:
+  diffusion_lightning:
+
+    # autoencoder: null # Turn AE off
+    autoencoder: ${model.compression.wavelet_fusion.autoencoder}
+    diffusion_unet: ${model.generation.diffusion_unet.diffusion_unet}
+    demographics_encoder: ${model.conditioning.demographics_encoder}
+    noise_scheduler: ${target_noise_scheduler.scheduler}
+
+    hparams:
+      lr: 3e-5
+      loss: L2
+      # latent_source: mu  Ignored when AE is null
+
+      prediction_type: v_prediction
+
+      # >>>
+      scale_factor_batches: 30  # Num batches for provisional estimation of scale factor
+      scale_factor: 1.61699 # Calculated by Export Latents Module (see: export_latents.py)
+      # <<<
+
+      # Set to num_train_timesteps for DDPM scheduler
+      num_inference_steps: ${target_noise_scheduler.infer_steps}
+
+      # Modality mapping comes from the transforms
+      use_modality_mapping: true
+      modality_map: ${dataset.conditioning.modality_map}
+      input_key: latent
+
+      latent_channels: ${model.compression.wavelet_fusion.autoencoder.latent_channels}
+
+
+      # Load the frozen WF-SA-VAE used to export and decode WFDM latents.
+      weight_loads:
+        - target: autoencoder
+          state_key: autoencoder
+          path: ${paths.wf_sa_vae_checkpoint}
+          strict: true
+          freeze: true
+          eval: true
+
+# PL trainer hyperparameters
+trainer:
+  pl_trainer:
+    precision: 16-mixed # FP16 AMP on CUDA
+    max_epochs: 800 # Also used by polynomial learning rate
+
+    log_every_n_steps: 20
+    check_val_every_n_epoch: 3
+
+    gradient_clip_algorithm: norm
+    gradient_clip_val: 1.0

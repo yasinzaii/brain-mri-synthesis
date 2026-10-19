@@ -1,0 +1,28 @@
+# @package _global_
+
+defaults:
+  - common
+  - _self_
+
+project: synthetic_dataset_wfdm_rflow_l2
+
+target_noise_scheduler: ${model.generation.diffusion_unet.scheduler_rflow_wrapper}
+inference_steps: 50
+wfdm_ckpt: ${paths.wfdm_rflow_l2_ckpt}
+
+synthetic_generation:
+  out_dataset_root: ${paths.syn_bs_wfdm_rflow_l2_ds_root}
+  out_json: ${paths.syn_bs_wfdm_rflow_l2_json}
+  sample_postfix: "waveletfusion_rflow_l2"
+
+  compute_metrics: false
+  metrics:
+    warmup_runs: 3
+    target_samples: 30
+    reset_peak_memory_each_run: true
+
+
+# For performance Metrics
+# dataset:
+#   brainscape:
+#     test_batch_size: 1

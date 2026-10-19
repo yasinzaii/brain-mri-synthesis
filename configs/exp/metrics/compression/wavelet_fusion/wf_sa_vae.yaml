@@ -1,0 +1,32 @@
+# @package _global_
+
+# Metrics for the BrainScape-trained WF-SA-VAE compression model.
+defaults:
+  - /paths/paths
+  - optional /paths: override # private path overrides, gitignored
+  - /dataset/brainscape
+  - /model/compression/wavelet_fusion/wf_sa_vae
+  - /metrics/compression
+  - /hydra/output
+  - /hydra/logging
+  - _self_
+
+project: wf_sa_vae_reconstruction_metrics
+device: auto
+seed: 42
+
+dataset:
+  brainscape:
+    test_batch_size: 10
+    num_workers: 6
+    cache_rate: 0
+    prefetch_factor: 2
+    pin_memory: false
+
+report:
+  model_name: "WF-SA-VAE"
+  study_name: "BrainScape"
+  compression: "1/4"
+
+reconstruction:
+  module: ${model.compression.autoencoder_wf_sa_vae}

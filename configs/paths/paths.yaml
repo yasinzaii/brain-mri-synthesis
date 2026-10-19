@@ -1,0 +1,24 @@
+# @package paths
+defaults:
+  - wf_sa_vae_latent_dataset
+  - _self_
+
+
+# Root directory for the BrainScape collection. Each child dataset directory contains
+# its preprocessed MRI image group (for example <dataset>/preprocessed/).
+brainscape_root: ???
+
+# BrainScape JSON manifest containing the real-MRI records, train/validation/test
+# split assignments, image paths, and associated metadata.
+brainscape_manifest: ???
+
+# Writable parent directory for Hydra run directories, logs, and composed configs.
+hydra_output_dir: ???
+
+# Trained WF-SA-VAE checkpoint used to encode the latent dataset and to decode
+# latents during WFDM training and sampling.
+wf_sa_vae_checkpoint: ???
+
+# Released WFDM RFlow-L2 checkpoint used to restore the `unet` and
+# `demographics_encoder` states.
+wfdm_rflow_l2_ckpt: ???

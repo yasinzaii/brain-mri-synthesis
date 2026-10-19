@@ -1,0 +1,31 @@
+# @package metrics
+# Used by: experiments/metrics/generation/report_metrics.py
+
+# Keys expected in the MONAI batch dict.
+keys:
+  real: image
+  synthetic: syn_image
+  modality: modality
+
+# Modalities to report explicitly (order).
+# Any additional modalities encountered in the dataloader are appended.
+modalities: [t1w, t2w, t1ce, flair]
+
+# Feature extraction normalization (applied before FID/MMD).
+intensity_normalization:  zscore-dataset
+
+# MS-SSIM configuration (applied to synthetic volumes).
+ms_ssim:
+  data_range: 1.0
+  intensity_normalization: null
+  kernel_type: null
+  kernel_sigma: null
+  k1: null
+  k2: null
+  max_pairs: 5000
+  pair_batch_size: 16
+
+# Output filenames (written to the Hydra run directory).
+output:
+  summary_csv: diffusion_metrics_summary.csv
+  table_txt: diffusion_metrics_table.txt

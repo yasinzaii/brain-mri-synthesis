@@ -1,0 +1,33 @@
+# @package _global_
+
+defaults:
+  - /exp/latent_dataset/_base
+  - /model/compression/wavelet_fusion/wf_sa_vae_arch
+  - /inferer/simple_inferer
+  - _self_
+
+project: latent_dataset_wf_sa_vae
+
+out_dataset_json: ${paths.wf_sa_vae_latent_dataset_manifest}
+
+lightning:
+  export_latents_module:
+    autoencoder: ${model.compression.wavelet_fusion.autoencoder}
+    inferer: ${inferer.simple_inferer}
+    save_sigma: true
+
+    enable_clamping: false
+    clamp_min: 0.0
+    clamp_max: 1.0
+
+    src_dataset_root: ${paths.brainscape_root}
+    out_dataset_dir: ${paths.wf_sa_vae_latent_dataset_data_root}
+
+    hparams:
+      weight_loads:
+        - target: "autoencoder"
+          state_key: "autoencoder"
+          path: ${paths.wf_sa_vae_checkpoint}
+          strict: true
+          freeze: true
+          eval: true

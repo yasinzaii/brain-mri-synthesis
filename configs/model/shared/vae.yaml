@@ -1,0 +1,6 @@
+# @package model.shared
+
+vae:
+  spatial_dims: 3
+  image_channels: 1
+  latent_channels: 4

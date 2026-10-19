@@ -1,0 +1,14 @@
+# @package hydra    
+
+defaults:
+  #- /paths: paths (Add in EXP Conf)
+  - _self_
+
+run:
+  dir: ${paths.hydra_output_dir}/${project}/${now:%Y-%m-%d}_${now:%H-%M-%S}
+
+job:
+  chdir: false          # run inside the output dir
+
+output_subdir: hydra    # where Hydra drops its own logs/configs
+

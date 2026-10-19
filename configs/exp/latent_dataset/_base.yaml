@@ -1,0 +1,54 @@
+# @package _global_
+
+defaults:
+  - /paths/paths               # @pkg: paths (must be added)
+  - optional /paths: override # private path overrides, gitignored
+  - /dataset/brainscape        # @pkg: dataset
+  - /hydra/output              # Hydra configs
+  - /hydra/logging             # Hydra logging configs
+  - _self_
+
+# Keep it generic; children set the model + inferer.
+project: latent_dataset_export
+seed: 42
+
+dataset:
+  brainscape:
+    train_tf: ${dataset.val_tf} # Use Val TF for all subsets
+    val_tf: ${dataset.val_tf}
+    test_tf: ${dataset.val_tf}
+    batch_size: 6
+    val_batch_size: 6
+    test_batch_size: 6
+    num_workers: 20
+    prefetch_factor: 2
+    pin_memory: false
+    persistent_workers: true
+
+# Filled by children
+out_dataset_json: ???
+
+lightning:
+  export_latents_module:
+    _target_: brainmint.lightning.export_latents_module.ExportLatentsModule
+    # Children set the autoencoder + inferer implementations
+    save_sigma: true
+    enable_clamping: false
+    clamp_min: 0.0
+    clamp_max: 1.0
+
+    # Input BrainScape
+    src_dataset_root: ${paths.brainscape_root}
+    # Output BrainScape (+Latent) set by children
+    out_dataset_dir: ???
+
+    # Loading From Checkpoints (children populate weight_loads)
+    hparams:
+      weight_loads: []
+
+trainer:
+  pl_trainer:
+    accelerator: gpu
+    devices: 1
+    precision: 32-true
+    log_every_n_steps: 10

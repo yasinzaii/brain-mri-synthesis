@@ -1,0 +1,329 @@
+# @package dataset.conditioning
+
+demographics_conditioning:
+  _target_: brainmint.data.transforms.demographics.DemographicsConditioningd
+  config: ${dataset.conditioning.demographics_config}
+  in_key: "demographics"
+  out_dict_key: "demo_dict"
+  out_values_key: "demo_values"
+  out_missing_key: "demo_missing"
+
+demographics_config:
+
+  # -------------------------------------------------------------------
+  # ORDER OF FEATURES
+  # -------------------------------------------------------------------
+  # This defines the exact order of positions in:
+  #   - demo_values  (float tensor of shape [F])
+  #   - demo_missing (bool  tensor of shape [F])
+  #
+  # The i-th entry here is demo_values[i], demo_missing[i].
+  ordered_fields:
+    # Numeric (z-scored)
+  - age
+  - height
+  - weight
+  - BMI
+
+    # Categorical (embedded as indices)
+  - age_group
+  - sex
+  - race
+  - handedness
+  - education
+  - socio_economic
+
+    # Y/N/n/a clinical flags (3-class categorical)
+  - stroke
+  - schizophrenia
+  - depression
+  - ADHD
+  - BIPOLAR
+  - prosopagnosia
+  - epilepsy
+  - FCD
+  - HS
+  - tumor
+  - acuteischaemicstroke
+  - DNT
+  - GL
+  - aneurysm
+  - ASD
+
+
+  # -------------------------------------------------------------------
+  # GLOBAL MAPPING FOR YES/NO/N/A
+  # -------------------------------------------------------------------
+  # Shared by all 'ynd' fields.
+  #  0: "n/a"
+  #  1: "no"
+  #  2: "yes"
+  yes_no_na_mapping:
+    "n/a": 0
+    "no": 1
+    "yes": 2
+
+
+  # -------------------------------------------------------------------
+  # PER-FIELD DEFINITIONS
+  # -------------------------------------------------------------------
+  # NOTE:
+  #   - `kind` is what the transform uses ("numeric", "categorical", "ynd").
+  #   - For numeric fields:
+  #       value_norm = (value_raw - mean) / std
+  #       "n/a" or missing → value_norm = 0.0, missing_flag = True
+  #   - For categorical/YND:
+  #       demo_values slot holds the integer index given by `mapping`.
+  #       "n/a"/missing → mapping["n/a"], missing_flag = True
+  fields:
+    age:
+      kind: numeric
+      mean: 27.318
+      std: 17.651
+      na_values: ["n/a"]
+
+    height:
+      kind: numeric
+      mean: 1.699
+      std: 0.102
+      na_values: ["n/a"]
+
+    weight:
+      kind: numeric
+      mean: 72.919
+      std: 14.699
+      na_values: ["n/a"]
+
+    BMI:
+      kind: numeric
+      mean: 25.133
+      std: 5.371
+      na_values: ["n/a"]
+    # ------------------------- CATEGORICAL ---------------------------
+    # age_group: string bins as they appear in BrainScape (example bins).
+    # Index 0 is reserved for "n/a".
+    age_group:
+      kind: categorical
+      mapping:
+        "n/a": 0
+        "0-5": 1
+        "5-10": 2
+        "10-15": 3
+        "15-20": 4
+        "20-25": 5
+        "25-30": 6
+        "30-35": 7
+        "35-40": 8
+        "40-45": 9
+        "45-50": 10
+        "50-55": 11
+        "55-60": 12
+        "60-65": 13
+        "65-70": 14
+        "70-75": 15
+        "75-80": 16
+        "80-85": 17
+        "85-90": 18
+        "90-95": 19
+        "95-100": 20
+      na_values: ["n/a"]
+      embed_dim: 8
+
+    # Exactly as in BrainScape JSON: "n/a", "other", "female", "male"
+    sex:
+      kind: categorical
+      mapping:
+        "n/a": 0
+        "other": 1
+        "female": 2
+        "male": 3
+      na_values: ["n/a"]
+      embed_dim: 4
+
+    # Race codes: "1".."8" or "n/a" in the BrainScape JSON.
+    # 0 reserved for "n/a".
+    race:
+      kind: categorical
+      mapping:
+        "n/a": 0
+        "1": 1
+        "2": 2
+        "3": 3
+        "4": 4
+        "5": 5
+        "6": 6
+        "7": 7
+        "8": 8
+      na_values: ["n/a"]
+      embed_dim: 8
+
+    # Handedness: "R", "L", "A" (ambidextrous), or "n/a".
+    handedness:
+      kind: categorical
+      mapping:
+        "n/a": 0
+        "R": 1
+        "L": 2
+        "A": 3
+      na_values: ["n/a"]
+      embed_dim: 4
+
+    # Education level
+    education:
+      kind: categorical
+      mapping:
+        "n/a": 0
+        "low": 1
+        "medium": 2
+        "high": 3
+      na_values: ["n/a"]
+      embed_dim: 4
+
+    # Socioeconomic status
+    socio_economic:
+      kind: categorical
+      mapping:
+        "n/a": 0
+        "low": 1
+        "medium": 2
+        "high": 3
+      na_values: ["n/a"]
+      embed_dim: 4
+
+    # -------------------------- YND FIELDS ---------------------------
+    # All clinical flags: strictly { "n/a", "no", "yes" }.
+    # We reuse yes_no_na_mapping via Hydra interpolation.
+    stroke:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    schizophrenia:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    depression:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    ADHD:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    BIPOLAR:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    prosopagnosia:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    epilepsy:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    FCD:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    HS:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    tumor:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    acuteischaemicstroke:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    DNT:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    GL:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    aneurysm:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3
+
+    ASD:
+      kind: ynd
+      mapping: ${dataset.conditioning.demographics_config.yes_no_na_mapping}
+      na_values: ["n/a"]
+      replace: 
+        "y": "yes"
+        "n": "no"
+      embed_dim: 3

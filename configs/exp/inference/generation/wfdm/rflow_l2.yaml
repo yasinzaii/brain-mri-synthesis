@@ -1,0 +1,113 @@
+# @package _global_
+
+defaults:
+  - /paths/paths
+  - optional /paths: override # private path overrides, gitignored
+  - /dataset/conditioning
+  - /dataset/demographics
+  - /model/compression/wavelet_fusion/wf_sa_vae_arch
+  - /model/generation/diffusion_unet/modality_conditioned
+  - /model/conditioning/demographics_encoder
+  - /hydra/output
+  - /hydra/logging
+  - _self_
+
+seed: 42
+device: auto
+project: inference_wfdm_rflow_l2
+
+model:
+  generation:
+    diffusion_unet:
+      diffusion_unet:
+        with_demographics: true
+        dem_embed_dim: ${model.conditioning.demographics_encoder.dem_embed_dim}
+
+wfdm_ckpt: ${paths.wfdm_rflow_l2_ckpt}
+
+inference:
+  runner: context_pipeline
+  output_dirname: samples
+
+  # Generate one image per requested modality; override both fields from the CLI.
+  modalities: [t1w]
+  images_per_modality: 1
+
+  # Empty means every demographic feature is marked missing for conditioning.
+  demographics: {}
+  filename_prefix: wfdm_rflow_l2
+  output_ext: .nii.gz
+  save_latents: false
+  scale_factor: 1.61699
+  latent_spatial: [48, 56, 40]
+  target_noise_scheduler: ${model.generation.diffusion_unet.scheduler_rflow_wrapper}
+  num_steps: 50
+  output:
+    writer:
+      _target_: brainmint.inference.io.writers.VolumeWriter
+      fallback_to_npy: false
+      nifti_affine: null
+
+generation:
+  runner:
+    _target_: brainmint.inference.core.runner.ContextPipelineRunner
+
+    pipeline:
+      _target_: brainmint.inference.diffusion.pipelines.base.LatentDiffusionGenerationPipeline
+
+      latent_provider:
+        _target_: brainmint.inference.diffusion.latent.common.fixed_shape.FixedShapeLatent
+        latent_channels: ${model.shared.vae.latent_channels}
+        spatial: ${inference.latent_spatial}
+        batch_key: batch_size
+
+      conditioning:
+        _target_: brainmint.inference.diffusion.conditioning.base.ComposeConditioning
+        builders:
+          - _target_: brainmint.inference.diffusion.conditioning.common.class_labels.ClassLabelsConditioning
+            in_key: modality_map
+            out_key: class_labels
+            num_classes: ${model.generation.diffusion_unet.diffusion_unet.num_class_embeds}
+          - _target_: brainmint.inference.diffusion.conditioning.common.demographics.DemographicsEmbeddingConditioning
+            values_key: demo_values
+            missing_key: demo_missing
+            encoder_module_key: demographics_encoder
+            out_embed_key: demographics_embedding
+
+      sampler:
+        _target_: brainmint.inference.diffusion.samplers.common.cond_unet.DiffusionUNetTimestepSampler
+        num_inference_steps: ${inference.num_steps}
+
+      postprocess: null
+      force_float32_decode: true
+
+    modules:
+      unet: ${model.generation.diffusion_unet.diffusion_unet}
+      noise_scheduler: ${inference.target_noise_scheduler}
+      autoencoder: ${model.compression.wavelet_fusion.autoencoder}
+      demographics_encoder: ${model.conditioning.demographics_encoder}
+
+    scalars:
+      scale_factor: ${inference.scale_factor}
+
+    weight_loads:
+      - target: autoencoder
+        state_key: autoencoder
+        path: ${paths.wf_sa_vae_checkpoint}
+        strict: auto
+        freeze: true
+        eval: true
+
+      - target: unet
+        state_key: unet
+        path: ${wfdm_ckpt}
+        strict: auto
+        freeze: true
+        eval: true
+
+      - target: demographics_encoder
+        state_key: demographics_encoder
+        path: ${wfdm_ckpt}
+        strict: auto
+        freeze: true
+        eval: true

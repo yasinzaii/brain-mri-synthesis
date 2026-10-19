@@ -1,0 +1,4 @@
+# @package inferer
+
+simple_inferer:
+  _target_: monai.inferers.SimpleInferer

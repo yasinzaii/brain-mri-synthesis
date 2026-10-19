@@ -1,0 +1,31 @@
+# @package callbacks
+
+defaults:
+  - base  # inherit all from base.yaml
+  - _self_
+
+diff_callbacks:
+  - ${callbacks.base_checkpoint_val}
+  - ${callbacks.base_checkpoint_train}
+  - ${callbacks.base_model_summary}
+  - ${callbacks.diffusion_save_mri_images}
+
+
+diffusion_save_mri_images:
+  _target_: brainmint.callbacks.log_images.SaveMRIImages
+  modalities: ["T1w", "T2w", "T1ce", "FLAIR"]
+  tag: "val"
+  subdir: "val_samples"
+  dirpath: ${hydra:runtime.output_dir}
+  infer_kwarg_keys: [latent, modality_map]   # First Key is the latent Input  
+  infer_method_candidates: ["run_inference_bs"]
+  fallback_to_forward: false
+  output_names: ["sample", "latent"]
+  save_outputs: [1, 1]
+  input_save_list: [] 
+  save_dtype: torch.float32
+  clamp_min: 0.0
+  clamp_max: 1.0
+  separate_folder: false
+
+

@@ -1,0 +1,83 @@
+# @package _global_
+
+# WF-SA-VAE training config.
+
+defaults:
+  - /paths/paths
+  - optional /paths: override # private path overrides, gitignored
+  - /dataset/brainscape
+  - /model/compression/wavelet_fusion/wf_sa_vae_arch
+  - /inferer/simple_inferer
+  - /loss/vae_loss
+  - /lightning/vae_module
+  - /trainer/compression/default
+  - /hydra/output
+  - /hydra/logging
+  - /callbacks/compression
+  - /loggers/default
+  - _self_
+
+project: wf_sa_vae
+seed: 42
+fast_dev_run: false
+
+dataset:
+  brainscape:
+    batch_size: 80
+    val_batch_size: 20
+    test_batch_size: 20
+    num_workers: 20
+    prefetch_factor: 2
+    pin_memory: false
+
+loss:
+  vae_loss:
+    adv_weight: 0.10
+    kl_weight: 1.0e-7
+    perceptual_weight: 0.30
+
+lightning:
+  vae_lightning:
+    autoencoder: ${model.compression.wavelet_fusion.autoencoder}
+    discriminator: ${model.compression.wavelet_fusion.patch_discriminator}
+    inferer: ${inferer.simple_inferer}
+    hparams:
+      lr: 1e-4
+      lambdaLR: ${.lambdaLR_G} # DEFAULT
+      lambdaLR_G:
+        - [0,  0.001]
+        - [10, 0.010]
+        - [20, 0.050]
+        - [30, 0.100]
+        - [40, 0.500]
+        - [50, 1.000]
+      lambdaLR_D:
+        - [0,  0.0001]
+        - [10, 0.0002]
+        - [20, 0.0010]
+        - [30, 0.0100]
+        - [40, 0.0500]
+        - [50, 0.2000]
+        - [60, 0.5000]
+      
+      # RESUMED FROM TRAINED WEIGHTS!!!
+      # weight_loads:
+      #   - target: "autoencoder"
+      #     state_key: "autoencoder"
+      #     path: ${TRAINED _ CHECKPOINT _ HERE}
+      #     strict: true
+      #     freeze: false
+      #     eval: false
+      #   - target: "discriminator"
+      #     state_key: "discriminator"
+      #     path: ${TRAINED _ CHECKPOINT _ HERE}
+      #     strict: true
+      #     freeze: false
+      #     eval: false
+
+trainer:
+  pl_trainer:
+    precision: 32-true
+    max_epochs: 200
+    log_every_n_steps: 100
+    check_val_every_n_epoch: 5

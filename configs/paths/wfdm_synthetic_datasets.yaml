@@ -1,0 +1,10 @@
+# @package paths
+
+# WFDM synthetic-dataset outputs. Set only wfdm_synthetic_root in the private
+# path override or on the Hydra command line. Each WFDM variant derives its
+# dataset directory and manifest path from that root.
+wfdm_synthetic_root: ???
+
+syn_bs_wfdm_rflow_l2_root: ${paths.wfdm_synthetic_root}/brainscape_waveletfusion_rflow_l2
+syn_bs_wfdm_rflow_l2_ds_root: ${paths.syn_bs_wfdm_rflow_l2_root}/dataset
+syn_bs_wfdm_rflow_l2_json: ${paths.syn_bs_wfdm_rflow_l2_root}/brainscape_waveletfusion_rflow_l2.json

@@ -1,0 +1,95 @@
+# @package dataset 
+
+defaults:
+  - /paths: paths #(Add to the top of EXP config)
+  - /dataset/conditioning 
+  - _self_
+
+
+# BrainScape MRIs has 1mm^3 spacial dim.
+# Center cropping all images by brain_roi_size.  
+#brain_roi_size: [180,200,155] # Not divisible by 16
+brain_roi_size: [192,224,160]  # Divisible by 32
+
+brainscape:
+  _target_: brainmint.data.brainscape.BrainScapeDataModule
+  json_path: ${paths.brainscape_manifest}
+  dataset_root: ${paths.brainscape_root}
+  train_tf: ${dataset.train_tf}
+  val_tf: ${dataset.val_tf}
+  test_tf: ${dataset.test_tf}
+  batch_size: 28
+  val_batch_size: 30
+  test_batch_size: 30
+  cache_rate: 1.0
+  num_workers: 14
+  prefetch_factor: 4
+  subset_frac: null # FOR DEBUG TESTING
+  seed: 42
+  pin_memory: true
+  persistent_workers: true
+  
+  # Don't include SEG Masks in modalities, BrainScape JSON Record has entries based on SUB/SES Record
+  # With modalities + SEG Masks combined. For DL Apps we seperate modalities [T1w, T2w, T1ce, FLAIR]
+  # And the for each modality we include [input image +- Latent image] based on the input_specs. 
+  # If that modality is supported by that Spec. SEG MAP should not be included as a modality
+  modalities: [T1w, T2w, T1ce, FLAIR]
+  input_specs:
+
+    - key: image
+      group: preprocessed
+      modalities: [T1w, T2w, T1ce, FLAIR]
+      # dataset_root
+
+    # - key: latent
+    #   group: latent
+    #   modalities: [T1w, T2w, T1ce, FLAIR]
+    #   dataset_root
+    
+    # - key: seg
+    #   group: preprocessed
+    #   modalities: [seg]
+    #   seg_map: True 
+    #   dataset_root
+    
+
+# Metadata Keys Passed on by the Transform
+default_meta_keys:
+  - modality
+  - dataset
+  - subject
+  #- demographics
+
+
+train_tf:
+  _target_: brainmint.data.transforms.mri_vae.VAETransform
+  is_train: true
+  random_aug: true
+  affine_type: rand_zoom
+  patch_size: [64, 64, 64]
+  brain_roi_size: ${dataset.brain_roi_size}
+  output_dtype: float32
+  image_keys: [image]
+  label_keys: []
+  passthrough_keys: []
+  meta_keys: ${dataset.default_meta_keys}
+  extra_xforms_end:
+    - ${dataset.conditioning.modality_conditioning}
+
+val_tf:
+  _target_: brainmint.data.transforms.mri_vae.VAETransform
+  is_train: false
+  random_aug: false
+  affine_type: original
+  brain_roi_size: ${dataset.brain_roi_size}
+  val_patch_size: null # Maybe update it to BrainRegion - Hardcoded in the Transform for now
+  output_dtype: float32
+  image_keys: [image]
+  label_keys: []
+  passthrough_keys: []
+  meta_keys: ${dataset.default_meta_keys}
+  extra_xforms_end:
+    - ${dataset.conditioning.modality_conditioning}
+
+test_tf: ${dataset.val_tf}
+

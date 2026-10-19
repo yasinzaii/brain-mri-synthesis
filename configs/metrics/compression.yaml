@@ -1,0 +1,16 @@
+# @package metrics
+
+report_modalities: [t1w, t2w, t1ce, flair]
+
+intensity:
+  max_value: 1.0
+
+lpips:
+  network: alex
+  is_fake_3d: true
+  fake_3d_ratio: 0.5
+
+output:
+  summary_csv: compression_metrics_summary.csv
+  sample_csv: compression_metrics_per_sample.csv
+  table_txt: compression_metrics_table.txt

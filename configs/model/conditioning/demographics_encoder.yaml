@@ -1,0 +1,8 @@
+# @package model.conditioning
+
+# Demographics encoder used to turn (demo_values, demo_missing) into a
+# fixed-width global embedding vector.
+demographics_encoder:
+  _target_: brainmint.models.conditioning.demographics_encoder.DemographicsEncoder
+  config: ${dataset.conditioning.demographics_config}
+  dem_embed_dim: 256

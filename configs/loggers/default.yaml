@@ -1,0 +1,12 @@
+# @package loggers
+
+# Tensorboard Logger
+- _target_: pytorch_lightning.loggers.TensorBoardLogger
+  save_dir: ${hydra:runtime.output_dir}
+  name: tensorboard
+  default_hp_metric: false
+
+# CSV Logger
+- _target_: pytorch_lightning.loggers.CSVLogger
+  save_dir: ${hydra:runtime.output_dir}
+  name: "csv_logs"

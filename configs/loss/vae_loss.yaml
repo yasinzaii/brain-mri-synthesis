@@ -1,0 +1,31 @@
+# @package loss
+
+defaults:
+  - _self_
+  - /model/shared/vae
+vae_loss: 
+  _target_: brainmint.losses.vae_loss_manager.VaeLossManager
+  _partial_: true
+  adv_loss_fn: ${loss.adv_loss}
+  perc_loss_fn: ${loss.perc_loss}
+  recon_loss_fn: ${loss.recon_loss}
+  
+  kl_weight: ???  # Required
+  adv_weight: ???
+  perceptual_weight: ???
+  device: ???
+  
+adv_loss:
+  _target_: monai.losses.adversarial_loss.PatchAdversarialLoss
+  criterion: least_squares  
+
+perc_loss:
+  _target_: monai.losses.perceptual.PerceptualLoss
+  spatial_dims: ${model.shared.vae.spatial_dims}
+  network_type: squeeze
+  is_fake_3d: true
+  fake_3d_ratio: 0.2
+
+recon_loss:
+  _target_: torch.nn.L1Loss  # or torch.nn.MSELoss
+  

@@ -1,0 +1,95 @@
+# @package lightning
+
+defaults:
+  - _self_
+
+diffusion_lightning:
+  _target_: brainmint.lightning.diffusion_module.DiffusionModule
+
+  # Inject submodules
+  autoencoder: ???
+  diffusion_unet: ???
+  noise_scheduler: ???
+  demographics_encoder: null
+
+ 
+
+  # Hparams
+  hparams:
+    lr: ???
+    loss: L1         # "L1" or "L2"
+    
+    scale_factor_batches: 1 # how many train batches to estimate scale_factor (1/std(z))
+    scale_factor: null # Set (>0) to bypass estimation and use a constant value
+
+    # When using AE ouput during training latent_source selects, Diffusion UNET Input: "mu" or "sample" from (mu,sigma)
+    # However, we are training using the latent (mu ) dataset.
+    latent_source: mu 
+
+    # Partial posterior sampling z = μ + (mask · α · σ · ε), mask ~ Bernoulli(p)
+    partial_sampling:
+      enabled: true
+      sigma_prob: 0.2
+      sigma_alpha: 0.2
+      sigma_key: "latent_sigma" 
+
+
+    # Exponential Moving Average (Model Weights, for inference, sampling)
+    ema:
+      enabled: true
+      decay: 0.999
+      update_every: 1
+      start_step: 500
+      store_on_cpu: false
+      use_fp32_shadow: true
+      track_all_params: true
+      update_frozen: false
+      use_for_sampling: true
+
+
+    # Weight Decay
+    weight_decay:
+      enabled: true
+      split_param_groups: true
+
+    # Latent is the target Batch key
+    input_key: latent
+
+    # Utilized when latent dataset is not available. 
+    # Will Result is slow Training.
+    encode_using_autoencoder: false 
+
+    # epsilon, sample, or v_prediction
+    prediction_type: v_prediction # epsilon, sample, or v_prediction
+
+
+    num_inference_steps: 50
+
+    # modality embedding (optional)
+    use_modality_mapping: true
+    
+    # Map string modality to integer class id
+    modality_map: ??? # Will be provided from exp yaml file.
+    # modality_map: ${dataset.conditioning.modality_map}
+    
+    latent_channels: ???
+    
+
+  # (Partial) 
+  optimizer: ${lightning.optimizer}
+  polylr: ${lightning.polylr}
+
+# Optimizer (partial)
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: ${lightning.diffusion_lightning.hparams.lr}
+  weight_decay: 1e-4
+
+# Optional LR scheduler
+polylr:
+  _target_: torch.optim.lr_scheduler.PolynomialLR
+  _partial_: true
+  #total_iters: 1
+  power: 2.0
+
